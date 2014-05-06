@@ -55,7 +55,7 @@ public Plugin:myinfo =
 public OnPluginStart()
 {
 	CreateConVar("sm_respawn_version", "1.0", "Player AutoRespawn Version", FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
-	sm_auto_respawn = CreateConVar("sm_auto_respawn", "0", "Automatically respawn players when they die; 0 - disabled, 1 - enabled (respawn on world kills only), 2 - enabled (respawn on enemy kill only), 3 - enabled (respawn always)");
+	sm_auto_respawn = CreateConVar("sm_auto_respawn", "3", "Automatically respawn players when they die; 0 - disabled, 1 - enabled (respawn on world kills only), 2 - enabled (respawn on enemy kill only), 3 - enabled (respawn always)");
 	sm_auto_respawn_time = CreateConVar("sm_auto_respawn_time", "0.0", "How many seconds to delay the respawn");
 	RegAdminCmd("sm_respawn", Command_Respawn, ADMFLAG_SLAY, "sm_respawn <#userid|name>");
 
