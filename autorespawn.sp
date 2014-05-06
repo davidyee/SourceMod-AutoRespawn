@@ -10,6 +10,10 @@
  * Disables auto-respawn if the same player dies consecutively in too short a 
  * period of time. The plugin also takes into account the spawn delay when 
  * determining whether or not to disable the respawn for the current round.
+ *
+ * You may allow respawning if the world kills the player (sm_auto_respawn 1) or
+ * if enemies kill the player (sm_auto_respawn 2) or if anything kills the player 
+ * (sm_auto_respawn 2).
  */
 
 #pragma semicolon 1
@@ -50,8 +54,8 @@ public Plugin:myinfo =
 
 public OnPluginStart()
 {
-	CreateConVar("sm_respawn_version", "1.5", "Player Respawn Version", FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
-	sm_auto_respawn = CreateConVar("sm_auto_respawn", "0", "Automatically respawn players when they die; 0 - disabled, 1 - enabled");
+	CreateConVar("sm_respawn_version", "1.0", "Player AutoRespawn Version", FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
+	sm_auto_respawn = CreateConVar("sm_auto_respawn", "0", "Automatically respawn players when they die; 0 - disabled, 1 - enabled (respawn on world kills only), 2 - enabled (respawn on enemy kill only), 3 - enabled (respawn always)");
 	sm_auto_respawn_time = CreateConVar("sm_auto_respawn_time", "0.0", "How many seconds to delay the respawn");
 	RegAdminCmd("sm_respawn", Command_Respawn, ADMFLAG_SLAY, "sm_respawn <#userid|name>");
 
@@ -176,7 +180,8 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	if(g_bBlockRespawn) return; // if disabled already, return nothing
 	
-	if (GetConVarInt(sm_auto_respawn) == 1)
+	new respawnState = GetConVarInt(sm_auto_respawn);
+	if (respawnState > 0)
 	{
 		// Get event info
 		new client = GetClientOfUserId(GetEventInt(event, "userid"));
@@ -186,8 +191,12 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 		
 		decl String:weapon[32];
 		GetEventString(event, "weapon", weapon, sizeof(weapon));
-	
-		if (client && !attacker && StrEqual(weapon, "trigger_hurt"))
+		
+		// uncomment to record if trap is specifically the killer
+		// new bool:isTrapKiller = client && !attacker && StrEqual(weapon, "trigger_hurt");
+		new bool:isWorldKiller = client && !attacker;
+		new bool:isEnemyKiller = client && attacker;
+		if ((isWorldKiller && respawnState == 1) || (isEnemyKiller && respawnState == 2) || respawnState == 3)
 		{
 			new Float:fGameTime = GetGameTime();
 			new Float:respawnTime = GetConVarFloat(sm_auto_respawn_time);
