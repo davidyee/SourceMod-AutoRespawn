@@ -13,7 +13,7 @@
  *
  * You may allow respawning if the world kills the player (sm_auto_respawn 1) or
  * if enemies kill the player (sm_auto_respawn 2) or if anything kills the player 
- * (sm_auto_respawn 2).
+ * (sm_auto_respawn 3).
  */
 
 #pragma semicolon 1
