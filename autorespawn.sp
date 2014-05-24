@@ -46,10 +46,10 @@ new bool:g_bBlockRespawn = false;
 public Plugin:myinfo =
 {
 	name = "Auto Respawn",
-	author = "David",
-	description = "Respawn dead players but disable if there is an auto-killer",
+	author = "David Y.",
+	description = "Respawn dead players back to their spawns and disable if there is an auto-killer",
 	version = "1.0",
-	url = "http://forums.alliedmods.net/showthread.php?p=984087"
+	url = "http://forums.alliedmods.net"
 }
 
 public OnPluginStart()
