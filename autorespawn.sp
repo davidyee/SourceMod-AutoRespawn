@@ -48,8 +48,8 @@ public Plugin:myinfo =
 	name = "Auto Respawn",
 	author = "David Y.",
 	description = "Respawn dead players back to their spawns and disable if there is an auto-killer",
-	version = "1.0",
-	url = "http://forums.alliedmods.net"
+	version = "1.0.1",
+	url = "https://forums.alliedmods.net/showthread.php?p=2166294"
 }
 
 public OnPluginStart()
@@ -245,7 +245,14 @@ public Action:RespawnPlayer2(Handle:Timer, any:client)
 
 	if(StrEqual(game, "cstrike") || StrEqual(game, "csgo"))
 	{
-		CS_RespawnPlayer(client);
+		// bug fix:
+		// do no attempt to respawn CS_TEAM_NONE or CS_TEAM_SPECTATOR
+		// spectators cause the spectated player to freeze
+		new team = GetClientTeam(client);
+		if(team == CS_TEAM_T || team == CS_TEAM_CT) 
+		{
+			CS_RespawnPlayer(client);
+		}
 	}
 	else if (StrEqual(game, "tf"))
 	{
