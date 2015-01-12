@@ -22,11 +22,11 @@ Otherwise, this plugin works similar to the Player Respawn plugin:
 - Slay admin flag is required - F (or root - Z)
 
 <h2>Cvars:</h2>
-`sm_respawn_version = 1.0` (can not be changed)
+`sm_respawn_version = 1.0.2` (can not be changed)
 
 `sm_auto_respawn` - Automatically respawn dead players (OFF - 0, On World - 1, On Enemy - 2, On Anything (Default) - 3)
 
-`sm_auto_respawn_time` - Amount of seconds to delay the respawn by (Default 0 seconds)
+`sm_auto_respawn_time` - Amount of seconds to delay the respawn by (Default 0.0 seconds)
 
 <h2>Cmds:</h2>
 sm_respawn <name | #userid> (also appears under player commands in the admin menu)

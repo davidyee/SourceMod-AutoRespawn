@@ -1,5 +1,5 @@
 /**
- * Auto Respawn V1.0.1
+ * Auto Respawn V1.0.2
  * By David Y.
  * Modified from bobobagan's Player Respawn plugin V1.5 at
  * https://forums.alliedmods.net/showthread.php?t=108708
@@ -38,6 +38,9 @@ new Handle:g_hGameConfig;
 #define TEAM_1         2
 #define TEAM_2         3
 
+// If players are being killed faster than the time below in seconds, then turn off the respawner
+#define REPEAT_KILLER_TIME 1.0
+
 new Handle:sm_auto_respawn = INVALID_HANDLE;
 new Handle:sm_auto_respawn_time = INVALID_HANDLE;
 new Float:MapChecker[MAXPLAYERS+1];
@@ -48,13 +51,13 @@ public Plugin:myinfo =
 	name = "Auto Respawn",
 	author = "David Y.",
 	description = "Respawn dead players back to their spawns and disable if there is an auto-killer",
-	version = "1.0.1",
+	version = "1.0.2",
 	url = "https://forums.alliedmods.net/showthread.php?p=2166294"
 }
 
 public OnPluginStart()
 {
-	CreateConVar("sm_respawn_version", "1.0.1", "Player AutoRespawn Version", FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
+	CreateConVar("sm_respawn_version", "1.0.2", "Player AutoRespawn Version", FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 	sm_auto_respawn = CreateConVar("sm_auto_respawn", "3", "Automatically respawn players when they die; 0 - disabled, 1 - enabled (respawn on world kills only), 2 - enabled (respawn on enemy kill only), 3 - enabled (respawn always)");
 	sm_auto_respawn_time = CreateConVar("sm_auto_respawn_time", "0.0", "How many seconds to delay the respawn");
 	RegAdminCmd("sm_respawn", Command_Respawn, ADMFLAG_SLAY, "sm_respawn <#userid|name>");
@@ -201,7 +204,7 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 			new Float:fGameTime = GetGameTime();
 			new Float:respawnTime = GetConVarFloat(sm_auto_respawn_time);
 			
-			if ((fGameTime - MapChecker[client] - respawnTime) < respawnTime)
+			if ((fGameTime - MapChecker[client] - respawnTime) < REPEAT_KILLER_TIME)
 			{
 				PrintToChatAll("\x04[Auto Respawner]\x01 Repeat killer detected. Disabling respawn for this round.");
 				g_bBlockRespawn = true;
