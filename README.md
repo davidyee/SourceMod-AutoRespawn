@@ -3,7 +3,7 @@ AutoRespawn
 
 <h2>Summary:</h2>
 
-I created this plugin based on a working respawn plugin, Player Respawn (v1.5), by bobobagan available at https://forums.alliedmods.net/showthread.php?t=108708.
+I created this plugin based on a working respawn plugin, Player Respawn (v1.5), by bobobagan available at https://forums.alliedmods.net/showthread.php?t=108708. This plugin was released to the general public on May 24, 2014 and is available for download at https://forums.alliedmods.net/showthread.php?t=240896.
 
 This plugin improves on Player Respawn by disabling automatic respawn if the player is killed in too short a time after respawning. Players can be killed too quickly if there is an AFK killer or auto-killer on the map (ie: in many mg_ maps) and therefore, I made this modified version of the Player Respawn plugin in an attempt to mitigate this issue.
 
@@ -35,3 +35,10 @@ sm_respawn <name | #userid> (also appears under player commands in the admin men
 - respawn.smx into /addons/sourcemod/plugins
 - respawn.phrases.txt into /addons/sourcemod/translations
 - plugin.respawn.txt into /addons/sourcemod/gamedata - Only required for DoD:S
+
+<h2>Changelog:</h2>
+- 1.0.1 (2014-07-19)
+  - Fix spectator's from causing living CT/T players to freeze when they are watching them
+
+- 1.0.0 (2014-05-24)
+  - Initial release 
