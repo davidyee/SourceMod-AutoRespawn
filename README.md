@@ -22,11 +22,13 @@ Otherwise, this plugin works similar to the Player Respawn plugin:
 - Slay admin flag is required - F (or root - Z)
 
 <h2>Cvars:</h2>
-`sm_respawn_version = 1.0.2` (can not be changed)
+`sm_respawn_version = 1.1.0` (can not be changed)
 
-`sm_auto_respawn` - Automatically respawn dead players (OFF - 0, On World - 1, On Enemy - 2, On Anything (Default) - 3)
+`sm_auto_respawn` - Automatically respawn dead players (OFF=0, On World=1, On Enemy=2, On Anything (Default=3)
 
-`sm_auto_respawn_time` - Amount of seconds to delay the respawn by (Default 0.0 seconds)
+`sm_auto_respawn_time` - Amount of seconds to delay the respawn by (Default=0.0)
+
+`sm_auto_respawn_type` - Respawn type; 0 - disable respawn for all players, 1 - disable respawn per player (Default=0)
 
 <h2>Cmds:</h2>
 sm_respawn <name | #userid> (also appears under player commands in the admin menu)
@@ -37,6 +39,13 @@ sm_respawn <name | #userid> (also appears under player commands in the admin men
 - plugin.respawn.txt into /addons/sourcemod/gamedata - Only required for DoD:S
 
 <h2>Changelog:</h2>
+- 1.1.0 (2015-01-24)
+  - Add respawn type check to allow players to continue respawning despite one player being killed by a repeat killer
+  - Refactor code
+
+- 1.0.2 (2015-01-11)
+  - Improve AFK killer detection logic
+
 - 1.0.1 (2014-07-19)
   - Fix spectator's from causing living CT/T players to freeze when they are watching them
 
