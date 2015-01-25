@@ -1,5 +1,5 @@
 /**
- * Auto Respawn V1.1.0
+ * Auto Respawn V1.1.1
  * By David Y.
  * Modified from bobobagan's Player Respawn plugin V1.5 at
  * https://forums.alliedmods.net/showthread.php?t=108708
@@ -56,12 +56,12 @@ public Plugin:myinfo = {
 	name = "Auto Respawn",
 	author = "David Y.",
 	description = "Respawn dead players back to their spawns and disable if there is an auto-killer",
-	version = "1.1.0",
+	version = "1.1.1",
 	url = "https://forums.alliedmods.net/showthread.php?p=2166294"
 }
 
 public OnPluginStart() {
-	CreateConVar("sm_respawn_version", "1.1.0", "Player AutoRespawn Version", FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
+	CreateConVar("sm_respawn_version", "1.1.1", "Player AutoRespawn Version", FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 	sm_auto_respawn = CreateConVar("sm_auto_respawn", "3", "Disable/World/Enemy/Always (0/1/2/3) respawn player on death");
 	sm_auto_respawn_time = CreateConVar("sm_auto_respawn_time", "0.0", "How many seconds to delay the respawn");
 	sm_auto_respawn_type = CreateConVar("sm_auto_respawn_type", "0", "Respawn type; 0 - disable respawn for all players, 1 - disable respawn per player");
@@ -228,6 +228,7 @@ public RespawnPlayer(client, target) {
 	decl String:game[40];
 	GetGameFolderName(game, sizeof(game));
 	LogAction(client, target, "\"%L\" respawned \"%L\"", client, target);
+	BlockRespawn[target] = false;
 
 	if(StrEqual(game, "cstrike") || StrEqual(game, "csgo")) {
 		CS_RespawnPlayer(target);

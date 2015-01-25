@@ -22,7 +22,7 @@ Otherwise, this plugin works similar to the Player Respawn plugin:
 - Slay admin flag is required - F (or root - Z)
 
 <h2>Cvars:</h2>
-`sm_respawn_version = 1.1.0` (can not be changed)
+`sm_respawn_version = 1.1.1` (can not be changed)
 
 `sm_auto_respawn` - Automatically respawn dead players (OFF=0, On World=1, On Enemy=2, On Anything (Default=3)
 
@@ -39,6 +39,8 @@ sm_respawn <name | #userid> (also appears under player commands in the admin men
 - plugin.respawn.txt into /addons/sourcemod/gamedata - Only required for DoD:S
 
 <h2>Changelog:</h2>
+- 1.1.1 (2015-01-25)
+  - Fix force respawn from not unblocking the given player's ability to automatically respawn
 - 1.1.0 (2015-01-24)
   - Add respawn type check to allow players to continue respawning despite one player being killed by a repeat killer
   - Refactor code
