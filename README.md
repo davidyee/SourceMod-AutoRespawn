@@ -12,35 +12,51 @@ I have only tested this plugin in Counter Strike: Global Offensive and therefore
 Otherwise, this plugin works similar to the Player Respawn plugin:
 
 <h2>Compatibility:</h2>
+
 - Counter Strike: Source
+
 - Counter Strike: Global Offensive
+
 - Day of Defeat: Source
+
 - Team Fortress 2
 
 <h2>Requirements:</h2>
+
 - Requires SourceMod v1.1 or greater
+
 - Slay admin flag is required - F (or root - Z)
 
 <h2>Cvars:</h2>
-`sm_respawn_version = 1.1.1` (can not be changed)
 
-`sm_auto_respawn` - Automatically respawn dead players (OFF=0, On World=1, On Enemy=2, On Anything (Default=3)
+`sm_respawn_version = 1.2.0` (can not be changed)
+
+`sm_auto_respawn` - Automatically respawn dead players (OFF=0, On World=1, On Enemy=2, On Anything (Default=3))
 
 `sm_auto_respawn_time` - Amount of seconds to delay the respawn by (Default=0.0)
 
-`sm_auto_respawn_type` - Respawn type; 0 - disable respawn for all players, 1 - disable respawn per player (Default=0)
+`sm_auto_respawn_type` - Respawn type (Disable respawn for all players=0, Disable respawn per player=1 (Default=0))
 
 <h2>Cmds:</h2>
-sm_respawn <name | #userid> (also appears under player commands in the admin menu)
+
+`sm_respawn <name | #userid>` (also appears under player commands in the admin menu)
 
 <h2>Installation:</h2>
+
 - respawn.smx into /addons/sourcemod/plugins
+
 - respawn.phrases.txt into /addons/sourcemod/translations
+
 - plugin.respawn.txt into /addons/sourcemod/gamedata - Only required for DoD:S
 
 <h2>Changelog:</h2>
+
+- 1.2.0 (2017-07-08)
+  - Add `sm_auto_respawn_bots` option to enable or disable respawning of bots
+
 - 1.1.1 (2015-01-25)
   - Fix force respawn from not unblocking the given player's ability to automatically respawn
+  
 - 1.1.0 (2015-01-24)
   - Add respawn type check to allow players to continue respawning despite one player being killed by a repeat killer
   - Refactor code

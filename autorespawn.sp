@@ -1,5 +1,5 @@
 /**
- * Auto Respawn V1.1.1
+ * Auto Respawn V1.2.0
  * By David Y.
  * Modified from bobobagan's Player Respawn plugin V1.5 at
  * https://forums.alliedmods.net/showthread.php?t=108708
@@ -48,6 +48,7 @@ new Handle:g_hGameConfig;
 new Handle:sm_auto_respawn = INVALID_HANDLE;
 new Handle:sm_auto_respawn_time = INVALID_HANDLE;
 new Handle:sm_auto_respawn_type = INVALID_HANDLE;
+new Handle:sm_auto_respawn_bots = INVALID_HANDLE;
 new Float:LastDeath[MAXPLAYERS+1];
 new bool:BlockRespawn[MAXPLAYERS+1];
 new bool:isRepeatKillerPresent = false;
@@ -56,15 +57,16 @@ public Plugin:myinfo = {
 	name = "Auto Respawn",
 	author = "David Y.",
 	description = "Respawn dead players back to their spawns and disable if there is an auto-killer",
-	version = "1.1.1",
+	version = "1.2.0",
 	url = "https://forums.alliedmods.net/showthread.php?p=2166294"
 }
 
 public OnPluginStart() {
-	CreateConVar("sm_respawn_version", "1.1.1", "Player AutoRespawn Version", FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
+	CreateConVar("sm_respawn_version", "1.2.0", "Player AutoRespawn Version", FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 	sm_auto_respawn = CreateConVar("sm_auto_respawn", "3", "Disable/World/Enemy/Always (0/1/2/3) respawn player on death");
 	sm_auto_respawn_time = CreateConVar("sm_auto_respawn_time", "0.0", "How many seconds to delay the respawn");
 	sm_auto_respawn_type = CreateConVar("sm_auto_respawn_type", "0", "Respawn type; 0 - disable respawn for all players, 1 - disable respawn per player");
+	sm_auto_respawn_bots = CreateConVar("sm_auto_respawn_bots", "1", "Disable/Enable (0/1) respawn bots on death");
 	RegAdminCmd("sm_respawn", Command_Respawn, ADMFLAG_SLAY, "sm_respawn <#userid|name>");
 
 	HookEvent("player_death", Event_PlayerDeath);
@@ -216,7 +218,14 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast) 
 			else {
 				// create the respawn for CTs or Ts
 				if(IsClientInGame(client) && (team == TEAM_1 || team == TEAM_2)) {
-					CreateTimer(GetConVarFloat(sm_auto_respawn_time), RespawnPlayer2, client, TIMER_FLAG_NO_MAPCHANGE);
+					new botSpawn = GetConVarInt(sm_auto_respawn_bots);
+					new bool:isBot = IsFakeClient(client);
+					new bool:isHuman = !isBot;
+					new bool:isBotSpawnOk = botSpawn && isBot;
+					
+					if(isHuman || isBotSpawnOk) {
+						CreateTimer(GetConVarFloat(sm_auto_respawn_time), RespawnPlayer2, client, TIMER_FLAG_NO_MAPCHANGE);
+					}
 				}
 			}
 			LastDeath[client] = fGameTime; // store the current time for the given player for next calculation
