@@ -1,0 +1,20 @@
+"Phrases"
+{
+	"Toggled respawn on target"
+	{
+		"#format"		"{1:t}"
+		"ru"			"{1} Возродился."
+	}
+	"Client not on active team"
+	{
+    "ru"  "Вы не можете возродить наблюдателей."
+  }
+  "Player no longer available"
+  {
+    "ru"  "Игрок больше не доступен."
+  }
+  "Unable to target"
+  {
+    "ru"  "Невозможная цель."
+  }
+}
