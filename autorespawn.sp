@@ -21,6 +21,7 @@
  */
 
 #pragma semicolon 1
+#pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
 
@@ -49,12 +50,12 @@ Handle sm_auto_respawn = null;
 Handle sm_auto_respawn_time = null;
 Handle sm_auto_respawn_type = null;
 Handle sm_auto_respawn_bots = null;
-Handle AutorespawnTimer[MAXPLAYERS+1];
-float LastDeath[MAXPLAYERS+1];
-bool BlockRespawn[MAXPLAYERS+1];
+Handle AutorespawnTimer[MAXPLAYERS + 1];
+float LastDeath[MAXPLAYERS + 1];
+bool BlockRespawn[MAXPLAYERS + 1];
 bool isRepeatKillerPresent = false;
 
-public Plugin:myinfo = {
+public Plugin myinfo = {
 	name = "Auto Respawn",
 	author = "David Y.",
 	description = "Respawn dead players back to their spawns and disable if there is an auto-killer",
@@ -102,7 +103,7 @@ public void OnPluginStart() {
 	AutoExecConfig(true, "respawn");
 }
 
-public Action Command_Respawn(client, args) {
+public Action Command_Respawn(int client, int args) {
 	if (args < 1) {
 		ReplyToCommand(client, "[SM] Usage: sm_respawn <#userid|name>");
 		return Plugin_Handled;
@@ -112,7 +113,8 @@ public Action Command_Respawn(client, args) {
 	GetCmdArg(1, arg, sizeof(arg));
 
 	char target_name[MAX_TARGET_LENGTH];
-	new target_list[MaxClients], target_count, bool:tn_is_ml;
+	int target_list[MAXPLAYERS + 1], target_count;
+	bool tn_is_ml;
 
 	target_count = ProcessTargetString(
 					arg,
@@ -163,7 +165,7 @@ public Action Command_Respawn(client, args) {
 	return Plugin_Handled;
 }
 
-public bool OnClientConnect(client, char[] rejectmsg, maxlen)
+public bool OnClientConnect(int client, char[] rejectmsg, int maxlen)
 {
 	LastDeath[client] = 0.0;
 	BlockRespawn[client] = false;
@@ -177,7 +179,7 @@ public void OnClientDisconnect(int client)
 	BlockRespawn[client] = false;
 }
 
-public Action Event_RoundStart(Handle event, const char[] name, bool dontBroadcast) {
+public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
 	for(int client=1; client<=MAXPLAYERS; client++) {
 		BlockRespawn[client] = false;
 	}
@@ -185,7 +187,7 @@ public Action Event_RoundStart(Handle event, const char[] name, bool dontBroadca
 	return Plugin_Continue;
 }
 
-public Event_PlayerDeath(Handle event, const char[] name, bool dontBroadcast) {
+public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) {
 	int pluginState = GetConVarInt(sm_auto_respawn);
 	int respawnType = GetConVarInt(sm_auto_respawn_type);
 	if (pluginState > 0) {
@@ -199,11 +201,11 @@ public Event_PlayerDeath(Handle event, const char[] name, bool dontBroadcast) {
 		}
 		
 		int team = GetClientTeam(client);
-		int attackerId = GetEventInt(event, "attacker");
+		int attackerId = event.GetInt("attacker");
 		int attacker = GetClientOfUserId(attackerId);
 		
 		char weapon[32];
-		GetEventString(event, "weapon", weapon, sizeof(weapon));
+		event.GetString("weapon", weapon, sizeof(weapon));
 		
 		// uncomment to record if trap is specifically the killer
 		// bool isTrapKiller = client && !attacker && StrEqual(weapon, "trigger_hurt");
@@ -241,7 +243,7 @@ public Event_PlayerDeath(Handle event, const char[] name, bool dontBroadcast) {
 	}
 }
 
-public RespawnPlayer(client, target) {
+public void RespawnPlayer(int client, int target) {
 	char game[40];
 	GetGameFolderName(game, sizeof(game));
 	LogAction(client, target, "\"%L\" respawned \"%L\"", client, target);
@@ -256,7 +258,7 @@ public RespawnPlayer(client, target) {
 	}
 }
 
-public Action RespawnPlayer2(Handle Timer, any:client) {
+public Action RespawnPlayer2(Handle Timer, any client) {
 	char game[40];
 	GetGameFolderName(game, sizeof(game));
 
@@ -276,19 +278,19 @@ public Action RespawnPlayer2(Handle Timer, any:client) {
 	AutorespawnTimer[client] = null;
 }
 
-public OnLibraryRemoved(const char[] name) {
+public void OnLibraryRemoved(const char[] name) {
 	if (StrEqual(name, "adminmenu")) {
 		hAdminMenu = null;
 	}
 }
 
-public OnAdminMenuReady(Handle topmenu) {
+public void OnAdminMenuReady(Handle topmenu) {
 	if (topmenu == hAdminMenu) {
 		return;
 	}
 	
 	hAdminMenu = topmenu;
-	new TopMenuObject:player_commands = FindTopMenuCategory(hAdminMenu, ADMINMENU_PLAYERCOMMANDS);
+	TopMenuObject player_commands = FindTopMenuCategory(hAdminMenu, ADMINMENU_PLAYERCOMMANDS);
 
 	if (player_commands != INVALID_TOPMENUOBJECT) {
 		AddToTopMenu(hAdminMenu,
@@ -301,7 +303,7 @@ public OnAdminMenuReady(Handle topmenu) {
 	}
 }
 
-public AdminMenu_Respawn( Handle topmenu, TopMenuAction:action, TopMenuObject:object_id, param, char[] buffer, maxlength ) {
+public int AdminMenu_Respawn( Handle topmenu, TopMenuAction action, TopMenuObject object_id, int param, char[] buffer, int maxlength ) {
 	if (action == TopMenuAction_DisplayOption) {
 		Format(buffer, maxlength, "Respawn Player");
 	} else if( action == TopMenuAction_SelectOption) {
@@ -309,24 +311,24 @@ public AdminMenu_Respawn( Handle topmenu, TopMenuAction:action, TopMenuObject:ob
 	}
 }
 
-DisplayPlayerMenu(client) {
-	Handle menu = CreateMenu(MenuHandler_Players);
+void DisplayPlayerMenu(int client) {
+	Menu menu = new Menu(MenuHandler_Players);
 
 	char title[100];
 	Format(title, sizeof(title), "Choose Player to Respawn:");
-	SetMenuTitle(menu, title);
-	SetMenuExitBackButton(menu, true);
+	menu.SetTitle(title);
+	menu.ExitBackButton = true;
 
 	// AddTargetsToMenu(menu, client, true, false);
 	// Lets only add dead players to the menu... we don't want to respawn alive players do we?
 	AddTargetsToMenu2(menu, client, COMMAND_FILTER_DEAD);
 
-	DisplayMenu(menu, client, MENU_TIME_FOREVER);
+	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-public MenuHandler_Players(Handle menu, MenuAction:action, param1, param2) {
+public int MenuHandler_Players(Menu menu, MenuAction action, int param1, int param2) {
 	if (action == MenuAction_End) {
-		CloseHandle(menu);
+		delete menu;
 	} else if (action == MenuAction_Cancel) {
 		if (param2 == MenuCancel_ExitBack && hAdminMenu != null) {
 			DisplayTopMenu(hAdminMenu, param1, TopMenuPosition_LastCategory);
