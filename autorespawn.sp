@@ -275,6 +275,11 @@ public void RespawnPlayer(int client, int target) {
 public Action RespawnPlayer2(Handle Timer, any client) {
 	char game[40];
 	GetGameFolderName(game, sizeof(game));
+	
+	if (!client || !IsClientInGame(client) || IsFakeClient(client))
+	{
+		return Plugin_Stop;
+	}
 
 	if(StrEqual(game, "cstrike") || StrEqual(game, "csgo")) {
 		// bug fix:
@@ -290,6 +295,8 @@ public Action RespawnPlayer2(Handle Timer, any client) {
 		SDKCall(g_hPlayerRespawn, client);
 	}
 	AutorespawnTimer[client] = null;
+	
+	return Plugin_Stop;
 }
 
 public void OnLibraryRemoved(const char[] name) {
