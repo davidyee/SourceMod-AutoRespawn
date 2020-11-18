@@ -1,5 +1,5 @@
 /**
- * Auto Respawn V1.2.0
+ * Auto Respawn V1.3.0
  * By David Y.
  * Modified from bobobagan's Player Respawn plugin V1.5 at
  * https://forums.alliedmods.net/showthread.php?t=108708
@@ -43,15 +43,15 @@ Handle g_hGameConfig;
 #define TEAM_1         2
 #define TEAM_2         3
 
-// If players are being killed faster than the time below in seconds, then turn off the respawner
-#define REPEAT_KILLER_TIME 1.0
-
-Handle sm_auto_respawn = null;
-Handle sm_auto_respawn_time = null;
-Handle sm_auto_respawn_type = null;
-Handle sm_auto_respawn_bots = null;
+ConVar sm_auto_respawn;
+ConVar sm_auto_respawn_time;
+ConVar sm_auto_respawn_type;
+ConVar sm_auto_respawn_bots;
+ConVar sm_auto_respawn_repeatkiller_time;
+ConVar sm_auto_respawn_hooksuicide;
 Handle AutorespawnTimer[MAXPLAYERS + 1];
 float LastDeath[MAXPLAYERS + 1];
+float LastSuicide[MAXPLAYERS + 1];
 bool BlockRespawn[MAXPLAYERS + 1];
 bool isRepeatKillerPresent = false;
 
@@ -59,17 +59,20 @@ public Plugin myinfo = {
 	name = "Auto Respawn",
 	author = "David Y.",
 	description = "Respawn dead players back to their spawns and disable if there is an auto-killer",
-	version = "1.2.0",
+	version = "1.3.0",
 	url = "https://forums.alliedmods.net/showthread.php?p=2166294"
 }
 
 public void OnPluginStart() {
-	CreateConVar("sm_respawn_version", "1.2.0", "Player AutoRespawn Version", FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
+	CreateConVar("sm_respawn_version", "1.3.0", "Player AutoRespawn Version", FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 	sm_auto_respawn = CreateConVar("sm_auto_respawn", "3", "Disable/World/Enemy/Always (0/1/2/3) respawn player on death");
 	sm_auto_respawn_time = CreateConVar("sm_auto_respawn_time", "0.0", "How many seconds to delay the respawn");
 	sm_auto_respawn_type = CreateConVar("sm_auto_respawn_type", "0", "Respawn type; 0 - disable respawn for all players, 1 - disable respawn per player");
 	sm_auto_respawn_bots = CreateConVar("sm_auto_respawn_bots", "1", "Disable/Enable (0/1) respawn bots on death");
+	sm_auto_respawn_repeatkiller_time = CreateConVar("sm_auto_respawn_repeatkiller_time", "1.1", "Repeat killer time");
+	sm_auto_respawn_hooksuicide = CreateConVar("sm_auto_respawn_hooksuicide", "1", "Don't hook/Hook (0/1) kill command for repeatkiller_time to prevent\nplayers from intentionally triggering a repeat killer detection");
 	RegAdminCmd("sm_respawn", Command_Respawn, ADMFLAG_SLAY, "sm_respawn <#userid|name>");
+	RegConsoleCmd("kill", Command_Kill);
 
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
@@ -101,6 +104,15 @@ public void OnPluginStart() {
 	LoadTranslations("common.phrases");
 	LoadTranslations("respawn.phrases");
 	AutoExecConfig(true, "respawn");
+}
+
+public Action Command_Kill(int client, int args)
+{
+	if (sm_auto_respawn_hooksuicide.BoolValue)
+	{
+		LastSuicide[client] = GetGameTime();
+	}
+	return Plugin_Continue;
 }
 
 public Action Command_Respawn(int client, int args) {
@@ -168,6 +180,7 @@ public Action Command_Respawn(int client, int args) {
 public bool OnClientConnect(int client, char[] rejectmsg, int maxlen)
 {
 	LastDeath[client] = 0.0;
+	LastSuicide[client] = 0.0;
 	BlockRespawn[client] = false;
 	return true;
 }
@@ -176,6 +189,7 @@ public void OnClientDisconnect(int client)
 {
 	delete AutorespawnTimer[client];
 	LastDeath[client] = 0.0;
+	LastSuicide[client] = 0.0;
 	BlockRespawn[client] = false;
 }
 
@@ -215,11 +229,11 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 			float fGameTime = GetGameTime();
 			float respawnTime = GetConVarFloat(sm_auto_respawn_time);
 			
-			if ((fGameTime - LastDeath[client] - respawnTime) < REPEAT_KILLER_TIME) {
+			if (((fGameTime - LastDeath[client] - respawnTime) < sm_auto_respawn_repeatkiller_time.FloatValue) && (!sm_auto_respawn_hooksuicide.BoolValue || (fGameTime - LastSuicide[client] - respawnTime) > sm_auto_respawn_repeatkiller_time.FloatValue)) {
 				if(respawnType) {
-					PrintToChat(client, "[SM] Repeat killer detected. Your auto respawn has been disabled for this round.");
+					PrintToChat(client, "[SM] %t", "Repeat killer indv");
 				} else {
-					PrintToChatAll("[SM] Repeat killer detected. Disabling respawn for this round.");
+					PrintToChatAll("[SM] %t", "Repeat killer global");
 				}
 				
 				BlockRespawn[client] = true;
