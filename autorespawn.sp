@@ -1,5 +1,5 @@
 /**
- * Auto Respawn V1.2.0
+ * Auto Respawn V1.3.0
  * By David Y.
  * Modified from bobobagan's Player Respawn plugin V1.5 at
  * https://forums.alliedmods.net/showthread.php?t=108708
@@ -21,6 +21,7 @@
  */
 
 #pragma semicolon 1
+#pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
 
@@ -32,9 +33,9 @@
 #undef REQUIRE_PLUGIN
 #include <adminmenu>
 
-new Handle:hAdminMenu = INVALID_HANDLE;
-new Handle:g_hPlayerRespawn;
-new Handle:g_hGameConfig;
+Handle hAdminMenu = null;
+Handle g_hPlayerRespawn;
+Handle g_hGameConfig;
 
 // This will be used for checking which team the player is on before respawning them
 #define SPECTATOR_TEAM 0
@@ -42,48 +43,52 @@ new Handle:g_hGameConfig;
 #define TEAM_1         2
 #define TEAM_2         3
 
-// If players are being killed faster than the time below in seconds, then turn off the respawner
-#define REPEAT_KILLER_TIME 1.0
+ConVar sm_auto_respawn;
+ConVar sm_auto_respawn_time;
+ConVar sm_auto_respawn_type;
+ConVar sm_auto_respawn_bots;
+ConVar sm_auto_respawn_repeatkiller_time;
+ConVar sm_auto_respawn_hooksuicide;
+Handle AutorespawnTimer[MAXPLAYERS + 1];
+float LastDeath[MAXPLAYERS + 1];
+float LastSuicide[MAXPLAYERS + 1];
+bool BlockRespawn[MAXPLAYERS + 1];
+bool isRepeatKillerPresent = false;
 
-new Handle:sm_auto_respawn = INVALID_HANDLE;
-new Handle:sm_auto_respawn_time = INVALID_HANDLE;
-new Handle:sm_auto_respawn_type = INVALID_HANDLE;
-new Handle:sm_auto_respawn_bots = INVALID_HANDLE;
-new Float:LastDeath[MAXPLAYERS+1];
-new bool:BlockRespawn[MAXPLAYERS+1];
-new bool:isRepeatKillerPresent = false;
-
-public Plugin:myinfo = {
+public Plugin myinfo = {
 	name = "Auto Respawn",
 	author = "David Y.",
 	description = "Respawn dead players back to their spawns and disable if there is an auto-killer",
-	version = "1.2.0",
+	version = "1.3.0",
 	url = "https://forums.alliedmods.net/showthread.php?p=2166294"
 }
 
-public OnPluginStart() {
-	CreateConVar("sm_respawn_version", "1.2.0", "Player AutoRespawn Version", FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
+public void OnPluginStart() {
+	CreateConVar("sm_respawn_version", "1.3.0", "Player AutoRespawn Version", FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 	sm_auto_respawn = CreateConVar("sm_auto_respawn", "3", "Disable/World/Enemy/Always (0/1/2/3) respawn player on death");
 	sm_auto_respawn_time = CreateConVar("sm_auto_respawn_time", "0.0", "How many seconds to delay the respawn");
 	sm_auto_respawn_type = CreateConVar("sm_auto_respawn_type", "0", "Respawn type; 0 - disable respawn for all players, 1 - disable respawn per player");
 	sm_auto_respawn_bots = CreateConVar("sm_auto_respawn_bots", "1", "Disable/Enable (0/1) respawn bots on death");
+	sm_auto_respawn_repeatkiller_time = CreateConVar("sm_auto_respawn_repeatkiller_time", "1.1", "Repeat killer time");
+	sm_auto_respawn_hooksuicide = CreateConVar("sm_auto_respawn_hooksuicide", "1", "Don't hook/Hook (0/1) kill command for repeatkiller_time to prevent\nplayers from intentionally triggering a repeat killer detection");
 	RegAdminCmd("sm_respawn", Command_Respawn, ADMFLAG_SLAY, "sm_respawn <#userid|name>");
+	RegConsoleCmd("kill", Command_Kill);
 
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 
-	new Handle:topmenu;
-	if (LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != INVALID_HANDLE)) {
+	Handle topmenu;
+	if (LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != null)) {
 		OnAdminMenuReady(topmenu);
 	}
 
-	decl String:game[40];
+	char game[40];
 	GetGameFolderName(game, sizeof(game));
 	if (StrEqual(game, "dod")) {
 		// Next 14 lines of text are taken from Andersso's DoDs respawn plugin. Thanks :)
 		g_hGameConfig = LoadGameConfigFile("plugin.respawn");
 
-		if (g_hGameConfig == INVALID_HANDLE) {
+		if (g_hGameConfig == null) {
 			SetFailState("Fatal Error: Missing File \"plugin.respawn\"!");
 		}
 
@@ -91,7 +96,7 @@ public OnPluginStart() {
 		PrepSDKCall_SetFromConf(g_hGameConfig, SDKConf_Signature, "DODRespawn");
 		g_hPlayerRespawn = EndPrepSDKCall();
 
-		if (g_hPlayerRespawn == INVALID_HANDLE) {
+		if (g_hPlayerRespawn == null) {
 			SetFailState("Fatal Error: Unable to find signature for \"CDODPlayer::DODRespawn(void)\"!");
 		}
 	}
@@ -101,17 +106,27 @@ public OnPluginStart() {
 	AutoExecConfig(true, "respawn");
 }
 
-public Action:Command_Respawn(client, args) {
+public Action Command_Kill(int client, int args)
+{
+	if (sm_auto_respawn_hooksuicide.BoolValue)
+	{
+		LastSuicide[client] = GetGameTime();
+	}
+	return Plugin_Continue;
+}
+
+public Action Command_Respawn(int client, int args) {
 	if (args < 1) {
 		ReplyToCommand(client, "[SM] Usage: sm_respawn <#userid|name>");
 		return Plugin_Handled;
 	}
 
-	new String:arg[65];
+	char arg[65];
 	GetCmdArg(1, arg, sizeof(arg));
 
-	new String:target_name[MAX_TARGET_LENGTH];
-	new target_list[MaxClients], target_count, bool:tn_is_ml;
+	char target_name[MAX_TARGET_LENGTH];
+	int target_list[MAXPLAYERS + 1], target_count;
+	bool tn_is_ml;
 
 	target_count = ProcessTargetString(
 					arg,
@@ -130,9 +145,9 @@ public Action:Command_Respawn(client, args) {
 	}
 
 	// Team filter dead players, re-order target_list array with new_target_count
-	new target, team, new_target_count;
+	int target, team, new_target_count;
 
-	for (new i = 0; i < target_count; i++) {
+	for (int i = 0; i < target_count; i++) {
 		target = target_list[i];
 		team = GetClientTeam(target);
 
@@ -155,34 +170,43 @@ public Action:Command_Respawn(client, args) {
 		ShowActivity2(client, "[SM] ", "%t", "Toggled respawn on target", "_s", target_name);
 	}
 
-	for (new i = 0; i < target_count; i++) {
+	for (int i = 0; i < target_count; i++) {
 		RespawnPlayer(client, target_list[i]);
 	}
 
 	return Plugin_Handled;
 }
 
-public bool:OnClientConnect(client, String:rejectmsg[], maxlen)
+public bool OnClientConnect(int client, char[] rejectmsg, int maxlen)
 {
 	LastDeath[client] = 0.0;
+	LastSuicide[client] = 0.0;
 	BlockRespawn[client] = false;
 	return true;
 }
 
-public Action:Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast) {
-	for(new client=1; client<=MAXPLAYERS; client++) {
+public void OnClientDisconnect(int client)
+{
+	delete AutorespawnTimer[client];
+	LastDeath[client] = 0.0;
+	LastSuicide[client] = 0.0;
+	BlockRespawn[client] = false;
+}
+
+public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
+	for(int client=1; client<=MAXPLAYERS; client++) {
 		BlockRespawn[client] = false;
 	}
 	isRepeatKillerPresent = false;
 	return Plugin_Continue;
 }
 
-public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast) {
-	new pluginState = GetConVarInt(sm_auto_respawn);
-	new respawnType = GetConVarInt(sm_auto_respawn_type);
+public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) {
+	int pluginState = GetConVarInt(sm_auto_respawn);
+	int respawnType = GetConVarInt(sm_auto_respawn_type);
 	if (pluginState > 0) {
 		// get event info
-		new client = GetClientOfUserId(GetEventInt(event, "userid"));
+		int client = GetClientOfUserId(GetEventInt(event, "userid"));
 		
 		if(respawnType) { // disable respawn per player
 			if(BlockRespawn[client]) return; 
@@ -190,26 +214,26 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast) 
 			if(isRepeatKillerPresent) return;
 		}
 		
-		new team = GetClientTeam(client);
-		new attackerId = GetEventInt(event, "attacker");
-		new attacker = GetClientOfUserId(attackerId);
+		int team = GetClientTeam(client);
+		int attackerId = event.GetInt("attacker");
+		int attacker = GetClientOfUserId(attackerId);
 		
-		decl String:weapon[32];
-		GetEventString(event, "weapon", weapon, sizeof(weapon));
+		char weapon[32];
+		event.GetString("weapon", weapon, sizeof(weapon));
 		
 		// uncomment to record if trap is specifically the killer
-		// new bool:isTrapKiller = client && !attacker && StrEqual(weapon, "trigger_hurt");
-		new bool:isWorldKiller = client && !attacker;
-		new bool:isEnemyKiller = client && attacker;
+		// bool isTrapKiller = client && !attacker && StrEqual(weapon, "trigger_hurt");
+		bool isWorldKiller = client && !attacker;
+		bool isEnemyKiller = client && attacker;
 		if ((isWorldKiller && pluginState == 1) || (isEnemyKiller && pluginState == 2) || pluginState == 3) {
-			new Float:fGameTime = GetGameTime();
-			new Float:respawnTime = GetConVarFloat(sm_auto_respawn_time);
+			float fGameTime = GetGameTime();
+			float respawnTime = GetConVarFloat(sm_auto_respawn_time);
 			
-			if ((fGameTime - LastDeath[client] - respawnTime) < REPEAT_KILLER_TIME) {
+			if (((fGameTime - LastDeath[client] - respawnTime) < sm_auto_respawn_repeatkiller_time.FloatValue) && (!sm_auto_respawn_hooksuicide.BoolValue || (fGameTime - LastSuicide[client] - respawnTime) > sm_auto_respawn_repeatkiller_time.FloatValue)) {
 				if(respawnType) {
-					PrintToChat(client, "[SM] Repeat killer detected. Your auto respawn has been disabled for this round.");
+					PrintToChat(client, "[SM] %t", "Repeat killer indv");
 				} else {
-					PrintToChatAll("[SM] Repeat killer detected. Disabling respawn for this round.");
+					PrintToChatAll("[SM] %t", "Repeat killer global");
 				}
 				
 				BlockRespawn[client] = true;
@@ -218,13 +242,13 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast) 
 			else {
 				// create the respawn for CTs or Ts
 				if(IsClientInGame(client) && (team == TEAM_1 || team == TEAM_2)) {
-					new botSpawn = GetConVarInt(sm_auto_respawn_bots);
-					new bool:isBot = IsFakeClient(client);
-					new bool:isHuman = !isBot;
-					new bool:isBotSpawnOk = botSpawn && isBot;
+					int botSpawn = GetConVarInt(sm_auto_respawn_bots);
+					bool isBot = IsFakeClient(client);
+					bool isHuman = !isBot;
+					bool isBotSpawnOk = botSpawn && isBot;
 					
 					if(isHuman || isBotSpawnOk) {
-						CreateTimer(GetConVarFloat(sm_auto_respawn_time), RespawnPlayer2, client, TIMER_FLAG_NO_MAPCHANGE);
+						AutorespawnTimer[client] = CreateTimer(GetConVarFloat(sm_auto_respawn_time), RespawnPlayer2, client, TIMER_FLAG_NO_MAPCHANGE);
 					}
 				}
 			}
@@ -233,8 +257,8 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast) 
 	}
 }
 
-public RespawnPlayer(client, target) {
-	decl String:game[40];
+public void RespawnPlayer(int client, int target) {
+	char game[40];
 	GetGameFolderName(game, sizeof(game));
 	LogAction(client, target, "\"%L\" respawned \"%L\"", client, target);
 	BlockRespawn[target] = false;
@@ -248,15 +272,20 @@ public RespawnPlayer(client, target) {
 	}
 }
 
-public Action:RespawnPlayer2(Handle:Timer, any:client) {
-	decl String:game[40];
+public Action RespawnPlayer2(Handle Timer, any client) {
+	char game[40];
 	GetGameFolderName(game, sizeof(game));
+	
+	if (!client || !IsClientInGame(client) || IsFakeClient(client))
+	{
+		return Plugin_Stop;
+	}
 
 	if(StrEqual(game, "cstrike") || StrEqual(game, "csgo")) {
 		// bug fix:
 		// do no attempt to respawn CS_TEAM_NONE or CS_TEAM_SPECTATOR
 		// spectators cause the spectated player to freeze
-		new team = GetClientTeam(client);
+		int team = GetClientTeam(client);
 		if(team == CS_TEAM_T || team == CS_TEAM_CT) {
 			CS_RespawnPlayer(client);
 		}
@@ -265,21 +294,24 @@ public Action:RespawnPlayer2(Handle:Timer, any:client) {
 	} else if (StrEqual(game, "dod")) {
 		SDKCall(g_hPlayerRespawn, client);
 	}
+	AutorespawnTimer[client] = null;
+	
+	return Plugin_Stop;
 }
 
-public OnLibraryRemoved(const String:name[]) {
+public void OnLibraryRemoved(const char[] name) {
 	if (StrEqual(name, "adminmenu")) {
-		hAdminMenu = INVALID_HANDLE;
+		hAdminMenu = null;
 	}
 }
 
-public OnAdminMenuReady(Handle:topmenu) {
+public void OnAdminMenuReady(Handle topmenu) {
 	if (topmenu == hAdminMenu) {
 		return;
 	}
 	
 	hAdminMenu = topmenu;
-	new TopMenuObject:player_commands = FindTopMenuCategory(hAdminMenu, ADMINMENU_PLAYERCOMMANDS);
+	TopMenuObject player_commands = FindTopMenuCategory(hAdminMenu, ADMINMENU_PLAYERCOMMANDS);
 
 	if (player_commands != INVALID_TOPMENUOBJECT) {
 		AddToTopMenu(hAdminMenu,
@@ -292,7 +324,7 @@ public OnAdminMenuReady(Handle:topmenu) {
 	}
 }
 
-public AdminMenu_Respawn( Handle:topmenu, TopMenuAction:action, TopMenuObject:object_id, param, String:buffer[], maxlength ) {
+public int AdminMenu_Respawn( Handle topmenu, TopMenuAction action, TopMenuObject object_id, int param, char[] buffer, int maxlength ) {
 	if (action == TopMenuAction_DisplayOption) {
 		Format(buffer, maxlength, "Respawn Player");
 	} else if( action == TopMenuAction_SelectOption) {
@@ -300,32 +332,32 @@ public AdminMenu_Respawn( Handle:topmenu, TopMenuAction:action, TopMenuObject:ob
 	}
 }
 
-DisplayPlayerMenu(client) {
-	new Handle:menu = CreateMenu(MenuHandler_Players);
+void DisplayPlayerMenu(int client) {
+	Menu menu = new Menu(MenuHandler_Players);
 
-	decl String:title[100];
+	char title[100];
 	Format(title, sizeof(title), "Choose Player to Respawn:");
-	SetMenuTitle(menu, title);
-	SetMenuExitBackButton(menu, true);
+	menu.SetTitle(title);
+	menu.ExitBackButton = true;
 
 	// AddTargetsToMenu(menu, client, true, false);
 	// Lets only add dead players to the menu... we don't want to respawn alive players do we?
 	AddTargetsToMenu2(menu, client, COMMAND_FILTER_DEAD);
 
-	DisplayMenu(menu, client, MENU_TIME_FOREVER);
+	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-public MenuHandler_Players(Handle:menu, MenuAction:action, param1, param2) {
+public int MenuHandler_Players(Menu menu, MenuAction action, int param1, int param2) {
 	if (action == MenuAction_End) {
-		CloseHandle(menu);
+		delete menu;
 	} else if (action == MenuAction_Cancel) {
-		if (param2 == MenuCancel_ExitBack && hAdminMenu != INVALID_HANDLE) {
+		if (param2 == MenuCancel_ExitBack && hAdminMenu != null) {
 			DisplayTopMenu(hAdminMenu, param1, TopMenuPosition_LastCategory);
 		}
 	}
 	else if (action == MenuAction_Select) {
-		decl String:info[32];
-		new userid, target;
+		char info[32];
+		int userid, target;
 
 		GetMenuItem(menu, param2, info, sizeof(info));
 		userid = StringToInt(info);
@@ -335,7 +367,7 @@ public MenuHandler_Players(Handle:menu, MenuAction:action, param1, param2) {
 		} else if (!CanUserTarget(param1, target)) {
 			PrintToChat(param1, "[SM] %t", "Unable to target");
 		} else {
-			new String:name[32];
+			char name[32];
 			GetClientName(target, name, sizeof(name));
 
 			RespawnPlayer(param1, target);

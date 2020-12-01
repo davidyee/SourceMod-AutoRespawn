@@ -2,19 +2,27 @@
 {
 	"Toggled respawn on target"
 	{
-		"#format"		"{1:t}"
-		"en"			"Respawned {1}."
+		"#format"	"{1:t}"
+		"en"		"Respawned {1}."
 	}
 	"Client not on active team"
 	{
-    "en"  "You can not respawn spectators."
-  }
-  "Player no longer available"
-  {
-    "en"  "Player no longer available."
-  }
-  "Unable to target"
-  {
-    "en"  "Unable to target."
-  }
+		"en"	"You can not respawn spectators."
+	}
+	"Player no longer available"
+	{
+		"en"	"Player no longer available."
+	}
+	"Unable to target"
+	{
+		"en"	"Unable to target."
+	}
+	"Repeat killer indv"
+	{
+		"en"	"Repeat killer detected. Your auto respawn has been disabled for this round."
+	}
+	"Repeat killer global"
+	{
+		"en"	"Repeat killer detected. Disabling respawn for this round."
+	}
 }
