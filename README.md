@@ -51,6 +51,13 @@ Otherwise, this plugin works similar to the Player Respawn plugin:
 
 <h2>Changelog:</h2>
 
+- 1.3.0 (2020-12-01) special thanks to @rlevet
+  - Fix for 50HP hurt triggers
+  - 2 bugs fixes
+  - Add translation support for the repeat killer phrase
+  - Made the spawnkiller detection timer customizable
+  - Switch to the new syntax (sm 1.10)
+
 - 1.2.0 (2017-07-08)
   - Add `sm_auto_respawn_bots` option to enable or disable respawning of bots
 
