@@ -278,6 +278,7 @@ public Action RespawnPlayer2(Handle Timer, any client) {
 	
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 	{
+		AutorespawnTimer[client] = null;
 		return Plugin_Stop;
 	}
 
