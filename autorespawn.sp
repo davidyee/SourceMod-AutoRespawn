@@ -1,5 +1,5 @@
 /**
- * Auto Respawn V1.3.0
+ * Auto Respawn V1.3.1
  * By David Y.
  * Modified from bobobagan's Player Respawn plugin V1.5 at
  * https://forums.alliedmods.net/showthread.php?t=108708
@@ -64,7 +64,7 @@ public Plugin myinfo = {
 }
 
 public void OnPluginStart() {
-	CreateConVar("sm_respawn_version", "1.3.0", "Player AutoRespawn Version", FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
+	CreateConVar("sm_respawn_version", "1.3.1", "Player AutoRespawn Version", FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 	sm_auto_respawn = CreateConVar("sm_auto_respawn", "3", "Disable/World/Enemy/Always (0/1/2/3) respawn player on death");
 	sm_auto_respawn_time = CreateConVar("sm_auto_respawn_time", "0.0", "How many seconds to delay the respawn");
 	sm_auto_respawn_type = CreateConVar("sm_auto_respawn_type", "0", "Respawn type; 0 - disable respawn for all players, 1 - disable respawn per player");
