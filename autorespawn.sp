@@ -59,7 +59,7 @@ public Plugin myinfo = {
 	name = "Auto Respawn",
 	author = "David Y.",
 	description = "Respawn dead players back to their spawns and disable if there is an auto-killer",
-	version = "1.3.0",
+	version = "1.3.1",
 	url = "https://forums.alliedmods.net/showthread.php?p=2166294"
 }
 
